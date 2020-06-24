@@ -75,7 +75,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private appService: AppService,
     private sharedLinksApiService: SharedLinksApiService,
     private storage: StorageService
-  ) {}
+  ) { }
 
   ngOnInit() {
     this.alfrescoApiService.getInstance().on('error', (error: { status: number }) => {
@@ -151,15 +151,34 @@ export class AppComponent implements OnInit, OnDestroy {
     const routesWithoutParent = [];
     extensionRoutes.forEach((extensionRoute: ExtensionRoute) => {
       if (this.extensionRouteHasChild(extensionRoute)) {
-        const routeIndex = this.router.config.findIndex((route) => route.path === extensionRoute.parentRoute);
-        this.convertExtensionRouteToRoute(extensionRoute);
-        this.router.config[routeIndex].children.unshift(extensionRoute);
+        // const routeIndex = this.router.config.findIndex(
+        //   route => route.path === extensionRoute.parentRoute
+        // );
+        // this.convertExtensionRouteToRoute(extensionRoute);
+        // this.router.config[routeIndex].children.unshift(extensionRoute);
+
+
+        const parentRoute = this.findRouteRecursively(extensionRoute.parentRoute);
+        if (parentRoute) {
+          this.convertExtensionRouteToRoute(extensionRoute);
+          parentRoute.children.unshift(extensionRoute);
+        }
       } else {
         routesWithoutParent.push(extensionRoute);
       }
     });
 
     this.router.config.unshift(...routesWithoutParent);
+    this.router.resetConfig(this.router.config);
+    console.log(this.router.config);
+  }
+
+  private findRouteRecursively(parentRoute) {
+    const routeIndex = this.router.config.findIndex(
+      route => route.path === parentRoute
+    );
+
+    return this.router.config[routeIndex];
   }
 
   private async loadUserProfile() {

@@ -47,7 +47,11 @@ import {
   SetRepositoryInfoAction
 } from '@alfresco/aca-shared/store';
 import { filter, takeUntil } from 'rxjs/operators';
-import { AppExtensionService, AppService, ContentApiService, ExtensionRoute } from '@alfresco/aca-shared';
+import {
+  AppService,
+  ContentApiService,
+  RouterExtensionService
+} from '@alfresco/aca-shared';
 import { DiscoveryEntry, GroupsApi, Group } from '@alfresco/js-api';
 import { Subject } from 'rxjs';
 import { INITIAL_APP_STATE } from './store/initial-state';
@@ -70,7 +74,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private alfrescoApiService: AlfrescoApiService,
     private authenticationService: AuthenticationService,
     private uploadService: UploadService,
-    private extensions: AppExtensionService,
+    private routerExtensionService: RouterExtensionService,
     private contentApi: ContentApiService,
     private appService: AppService,
     private sharedLinksApiService: SharedLinksApiService,
@@ -110,8 +114,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.store.dispatch(new SetCurrentUrlAction(router.url));
       });
 
-    const extensionRoutes = this.extensions.getApplicationRoutes();
-    this.mapExtensionRoutes(extensionRoutes);
+    this.routerExtensionService.mapExtensionRoutes();
 
     this.uploadService.fileUploadError.subscribe((error) => this.onFileUploadedError(error));
 
@@ -136,49 +139,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.contentApi.getRepositoryInformation().subscribe((response: DiscoveryEntry) => {
       this.store.dispatch(new SetRepositoryInfoAction(response.entry.repository));
     });
-  }
-
-  private extensionRouteHasChild(route: ExtensionRoute): boolean {
-    return route.parentRoute !== undefined;
-  }
-
-  private convertExtensionRouteToRoute(extensionRoute: ExtensionRoute) {
-    delete extensionRoute.parentRoute;
-    delete extensionRoute.component;
-  }
-
-  mapExtensionRoutes(extensionRoutes: ExtensionRoute[]) {
-    const routesWithoutParent = [];
-    extensionRoutes.forEach((extensionRoute: ExtensionRoute) => {
-      if (this.extensionRouteHasChild(extensionRoute)) {
-        // const routeIndex = this.router.config.findIndex(
-        //   route => route.path === extensionRoute.parentRoute
-        // );
-        // this.convertExtensionRouteToRoute(extensionRoute);
-        // this.router.config[routeIndex].children.unshift(extensionRoute);
-
-
-        const parentRoute = this.findRouteRecursively(extensionRoute.parentRoute);
-        if (parentRoute) {
-          this.convertExtensionRouteToRoute(extensionRoute);
-          parentRoute.children.unshift(extensionRoute);
-        }
-      } else {
-        routesWithoutParent.push(extensionRoute);
-      }
-    });
-
-    this.router.config.unshift(...routesWithoutParent);
-    this.router.resetConfig(this.router.config);
-    console.log(this.router.config);
-  }
-
-  private findRouteRecursively(parentRoute) {
-    const routeIndex = this.router.config.findIndex(
-      route => route.path === parentRoute
-    );
-
-    return this.router.config[routeIndex];
   }
 
   private async loadUserProfile() {
